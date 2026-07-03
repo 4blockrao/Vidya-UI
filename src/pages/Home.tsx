@@ -43,7 +43,6 @@ export function Home() {
   useEffect(() => {
     if (loading) return;
     if (!session) { window.location.href = "/login"; return; }
-    if (!profile?.onboarding_completed) { window.location.href = "/onboarding"; return; }
   }, [loading, session, profile]);
 
   useEffect(() => {
