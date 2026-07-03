@@ -17,6 +17,8 @@ export function Profile() {
   const [editing, setEditing] = useState<Child | null>(null);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ name: "", grade: "", board: "" });
+  const [lang, setLang] = useState("hi");
+  const [savingLang, setSavingLang] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { if (!loading && !session) window.location.href = "/login"; }, [loading, session]);
@@ -24,6 +26,8 @@ export function Profile() {
     if (!session?.user) return;
     sb.from("children").select("*").eq("user_id", session.user.id).order("created_at")
       .then(({ data }) => setChildren((data as Child[]) ?? []));
+    sb.from("profiles").select("preferred_language").eq("id", session.user.id).single()
+      .then(({ data }) => { if (data?.preferred_language) setLang(data.preferred_language as string); });
   }, [session?.user?.id]);
 
   async function saveChild() {
@@ -42,6 +46,14 @@ export function Profile() {
       setForm({ name: "", grade: "", board: "" });
     } catch (e) { toast.error(friendlyError(e)); }
     finally { setBusy(false); }
+  }
+
+  async function saveLang(newLang: string) {
+    if (!session?.user) return;
+    setSavingLang(true);
+    await sb.from("profiles").update({ preferred_language: newLang }).eq("id", session.user.id);
+    setLang(newLang);
+    setSavingLang(false);
   }
 
   async function logout() {
@@ -116,8 +128,22 @@ export function Profile() {
             <Plus size={14} /> Add a child
           </button>
         )}
+        <div style={{ height: 1, background: "var(--c-border)", margin: "20px 0 16px" }} />
+        <p style={{ fontSize: 11, fontWeight: 500, color: "var(--c-text3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+          Vidya ki bhasha
+        </p>
+        <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+          {([["hi", "हिंदी", "Hindi mein jawab"] as const, ["en", "English", "English responses"] as const]).map(([val, label, desc]) => (
+            <button key={val} onClick={() => saveLang(val)} disabled={savingLang}
+              style={{ flex: 1, padding: "10px 8px", borderRadius: 10, border: `0.5px solid ${lang === val ? "var(--c-accent)" : "var(--c-border)"}`, background: lang === val ? "var(--c-accent-bg)" : "var(--c-bg2)", cursor: "pointer", textAlign: "center", opacity: savingLang ? 0.6 : 1 }}>
+              <div style={{ fontSize: 15, marginBottom: 2, fontWeight: 500, color: lang === val ? "var(--c-accent-text)" : "var(--c-text)" }}>{label}</div>
+              <div style={{ fontSize: 11, color: lang === val ? "var(--c-accent)" : "var(--c-text3)" }}>{desc}</div>
+            </button>
+          ))}
+        </div>
+
         <button onClick={logout}
-          style={{ width: "100%", height: 44, marginTop: 24, border: "0.5px solid rgba(226,75,74,0.3)", borderRadius: 10, color: "var(--c-danger)", fontSize: 13, fontWeight: 500, background: "none", cursor: "pointer" }}>
+          style={{ width: "100%", height: 44, border: "0.5px solid rgba(226,75,74,0.3)", borderRadius: 10, color: "var(--c-danger)", fontSize: 13, fontWeight: 500, background: "none", cursor: "pointer" }}>
           Log out
         </button>
       </div>
