@@ -117,7 +117,7 @@ export function Chat() {
       else if (upload) body.upload_id = upload;
       if (child) body.child_id = child;
 
-      const res = await fetch(`${API}/api/chat/stream`, {
+      const res = await fetch(`${API}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify(body),
