@@ -13,7 +13,6 @@ import { Toaster } from "sonner";
 import "./styles.css";
 
 import { Login } from "@/pages/Login";
-import { Onboarding } from "@/pages/Onboarding";
 import { Home } from "@/pages/Home";
 import { Chat } from "@/pages/Chat";
 import { Profile } from "@/pages/Profile";
@@ -31,12 +30,6 @@ const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
   component: Login,
-});
-
-const onboardingRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/onboarding",
-  component: Onboarding,
 });
 
 const homeRoute = createRoute({
@@ -60,7 +53,6 @@ const profileRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
-  onboardingRoute,
   homeRoute,
   chatRoute,
   profileRoute,
