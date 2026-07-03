@@ -27,6 +27,7 @@ export function Login() {
   const [suChildName, setSuChildName] = useState("");
   const [suGrade, setSuGrade] = useState("");
   const [suBoard, setSuBoard] = useState("");
+  const [suLang, setSuLang] = useState("hi");
 
   // Verify
   const [otp, setOtp] = useState("");
@@ -108,6 +109,7 @@ export function Login() {
       await sb.from("profiles").upsert({
         id: uid,
         full_name: suName.trim(),
+        preferred_language: suLang,
         onboarding_completed: true,
       });
       await sb.from("children").insert({
@@ -262,6 +264,21 @@ export function Login() {
               <option value="">Select board</option>
               {BOARDS.map(b => <option key={b} value={b}>{b}</option>)}
             </select>
+          </div>
+
+          <div>
+            <label style={{ fontSize: 12, color: "var(--c-text2)", display: "block", marginBottom: 5 }}>
+              Vidya kis bhasha mein baat kare?
+            </label>
+            <div style={{ display: "flex", gap: 8 }}>
+              {([["hi", "हिंदी", "Vidya Hindi mein jawab degi"], ["en", "English", "Vidya will respond in English"]] as const).map(([val, label, desc]) => (
+                <button key={val} type="button" onClick={() => setSuLang(val)}
+                  style={{ flex: 1, padding: "10px 8px", borderRadius: 10, border: `0.5px solid ${suLang === val ? "var(--c-accent)" : "var(--c-border)"}`, background: suLang === val ? "var(--c-accent-bg)" : "var(--c-bg2)", cursor: "pointer", textAlign: "center" }}>
+                  <div style={{ fontSize: 16, marginBottom: 2 }}>{label}</div>
+                  <div style={{ fontSize: 11, color: suLang === val ? "var(--c-accent-text)" : "var(--c-text3)" }}>{desc}</div>
+                </button>
+              ))}
+            </div>
           </div>
 
           {error && <p style={{ fontSize: 13, color: "var(--c-danger)", marginTop: 4 }}>{error}</p>}
