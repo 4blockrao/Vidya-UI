@@ -1,0 +1,1 @@
+{"root":["./src/main.tsx","./src/components/BottomNav.tsx","./src/components/Spinner.tsx","./src/hooks/useAuth.tsx","./src/lib/errors.ts","./src/lib/image.ts","./src/lib/supabase.ts","./src/pages/Chat.tsx","./src/pages/Home.tsx","./src/pages/Login.tsx","./src/pages/Onboarding.tsx","./src/pages/Profile.tsx"],"version":"5.9.3"}
