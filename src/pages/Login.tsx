@@ -17,7 +17,7 @@ export function Login() {
   }, [session]);
 
   function tick() {
-    setCd(60);
+    setCd(300);
     const t = setInterval(() => setCd(c => {
       if (c <= 1) { clearInterval(t); return 0; }
       return c - 1;
@@ -32,7 +32,10 @@ export function Login() {
     setBusy(true);
     const { error } = await sb.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
-      options: { shouldCreateUser: true },
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo: undefined,
+      },
     });
     setBusy(false);
     if (error) { toast.error(friendlyError(error)); return; }
@@ -41,7 +44,7 @@ export function Login() {
   }
 
   async function verify() {
-    if (otp.length !== 6) { toast.error("6 digit OTP daalen."); return; }
+    if (otp.length < 6) { toast.error("Pura code daalen."); return; }
     setBusy(true);
     const { error } = await sb.auth.verifyOtp({
       email: email.trim().toLowerCase(),
@@ -76,7 +79,7 @@ export function Login() {
             style={{ width: "100%", height: 48, border: "0.5px solid var(--c-border)", borderRadius: 10, background: "var(--c-bg2)", padding: "0 14px", fontSize: 15, color: "var(--c-text)", outline: "none" }}
           />
           <p style={{ fontSize: 12, color: "var(--c-text3)", marginTop: 8 }}>
-            Aapke email par ek verification code bheja jayega
+            Aapke email par ek 8-digit verification code bheja jayega
           </p>
           <button
             onClick={sendOTP}
@@ -89,7 +92,7 @@ export function Login() {
       ) : (
         <div>
           <p style={{ fontSize: 13, color: "var(--c-text2)", textAlign: "center", marginBottom: 6 }}>
-            Code bheja gaya
+            8-digit code bheja gaya
           </p>
           <p style={{ fontSize: 13, fontWeight: 500, color: "var(--c-text)", textAlign: "center", marginBottom: 20 }}>
             {email}
@@ -97,24 +100,24 @@ export function Login() {
           <input
             type="tel"
             inputMode="numeric"
-            maxLength={6}
+            maxLength={8}
             autoFocus
-            placeholder="------"
+            placeholder="--------"
             value={otp}
             onChange={e => setOtp(e.target.value.replace(/\D/g, ""))}
             onKeyDown={e => e.key === "Enter" && verify()}
-            style={{ width: "100%", height: 56, textAlign: "center", letterSpacing: 14, fontSize: 26, fontWeight: 600, border: "0.5px solid var(--c-border)", borderRadius: 10, background: "var(--c-bg2)", color: "var(--c-text)", outline: "none" }}
+            style={{ width: "100%", height: 56, textAlign: "center", letterSpacing: 10, fontSize: 22, fontWeight: 600, border: "0.5px solid var(--c-border)", borderRadius: 10, background: "var(--c-bg2)", color: "var(--c-text)", outline: "none" }}
           />
           <button
             onClick={verify}
-            disabled={busy || otp.length !== 6}
-            style={{ width: "100%", height: 48, marginTop: 14, borderRadius: 10, background: otp.length === 6 ? "var(--c-accent)" : "var(--c-bg3)", color: otp.length === 6 ? "#fff" : "var(--c-text3)", fontSize: 15, fontWeight: 500, border: "none", cursor: otp.length === 6 ? "pointer" : "default", opacity: busy ? 0.7 : 1 }}
+            disabled={busy || otp.length < 6}
+            style={{ width: "100%", height: 48, marginTop: 14, borderRadius: 10, background: otp.length >= 6 ? "var(--c-accent)" : "var(--c-bg3)", color: otp.length >= 6 ? "#fff" : "var(--c-text3)", fontSize: 15, fontWeight: 500, border: "none", cursor: otp.length >= 6 ? "pointer" : "default", opacity: busy ? 0.7 : 1 }}
           >
             {busy ? "Verify ho raha hai..." : "Verify Karein"}
           </button>
           <div style={{ textAlign: "center", marginTop: 16, fontSize: 13, color: "var(--c-text2)" }}>
             {cd > 0 ? (
-              <span>Code expire hoga {cd}s mein</span>
+              <span>Code {Math.floor(cd / 60)}:{String(cd % 60).padStart(2, "0")} mein expire hoga</span>
             ) : (
               <button onClick={sendOTP} style={{ color: "var(--c-accent)", fontSize: 13, background: "none", border: "none", cursor: "pointer" }}>
                 Code dobara bhejein
@@ -122,7 +125,7 @@ export function Login() {
             )}
           </div>
           <button
-            onClick={() => { setStep("email"); setOtp(""); }}
+            onClick={() => { setStep("email"); setOtp(""); setCd(0); }}
             style={{ display: "block", margin: "12px auto 0", fontSize: 13, color: "var(--c-text2)", background: "none", border: "none", cursor: "pointer" }}
           >
             ← Email badlein
