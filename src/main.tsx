@@ -1,12 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  createRouter,
-  createRoute,
-  createRootRoute,
-  RouterProvider,
-  Outlet,
-  redirect,
+  createRouter, createRoute, createRootRoute,
+  RouterProvider, Outlet, redirect,
 } from "@tanstack/react-router";
 import { AuthProvider } from "@/hooks/useAuth";
 import { Toaster } from "sonner";
