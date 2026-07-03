@@ -273,9 +273,9 @@ export function Login() {
             <div style={{ display: "flex", gap: 8 }}>
               {([["hi", "हिंदी", "Vidya Hindi mein jawab degi"], ["en", "English", "Vidya will respond in English"]] as const).map(([val, label, desc]) => (
                 <button key={val} type="button" onClick={() => setSuLang(val)}
-                  style={{ flex: 1, padding: "10px 8px", borderRadius: 10, border: `0.5px solid ${suLang === val ? "var(--c-accent)" : "var(--c-border)"}`, background: suLang === val ? "var(--c-accent-bg)" : "var(--c-bg2)", cursor: "pointer", textAlign: "center" }}>
-                  <div style={{ fontSize: 16, marginBottom: 2 }}>{label}</div>
-                  <div style={{ fontSize: 11, color: suLang === val ? "var(--c-accent-text)" : "var(--c-text3)" }}>{desc}</div>
+                  style={{ flex: 1, padding: "12px 8px", borderRadius: 10, border: `2px solid ${suLang === val ? "var(--c-accent)" : "var(--c-border)"}`, background: suLang === val ? "var(--c-accent)" : "var(--c-bg2)", cursor: "pointer", textAlign: "center" }}>
+                  <div style={{ fontSize: 17, marginBottom: 3, fontWeight: 600, color: suLang === val ? "#fff" : "var(--c-text)" }}>{label}</div>
+                  <div style={{ fontSize: 11, color: suLang === val ? "rgba(255,255,255,0.85)" : "var(--c-text2)" }}>{desc}</div>
                 </button>
               ))}
             </div>
