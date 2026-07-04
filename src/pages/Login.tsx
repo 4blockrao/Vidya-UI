@@ -103,17 +103,22 @@ export function Login() {
     });
     if (e) { setBusy(false); setError(friendlyError(e)); return; }
 
-    // Save profile + child
     const uid = data.user?.id;
-    if (uid) {
-      // Ensure session is active before writing to database
-      await sb.auth.getSession();
+    const accessToken = data.session?.access_token;
+    const refreshToken = data.session?.refresh_token;
+
+    if (uid && accessToken && refreshToken) {
+      // Explicitly set session so Supabase client is authenticated
+      await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+
+      // Now save profile with authenticated session
       await sb.from("profiles").upsert({
         id: uid,
         full_name: suName.trim(),
         preferred_language: suLang,
         onboarding_completed: true,
       }, { onConflict: "id" });
+
       await sb.from("children").insert({
         user_id: uid,
         name: suChildName.trim(),
