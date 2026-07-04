@@ -106,12 +106,14 @@ export function Login() {
     // Save profile + child
     const uid = data.user?.id;
     if (uid) {
+      // Ensure session is active before writing to database
+      await sb.auth.getSession();
       await sb.from("profiles").upsert({
         id: uid,
         full_name: suName.trim(),
         preferred_language: suLang,
         onboarding_completed: true,
-      });
+      }, { onConflict: "id" });
       await sb.from("children").insert({
         user_id: uid,
         name: suChildName.trim(),
