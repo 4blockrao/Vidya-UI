@@ -81,7 +81,10 @@ export function Login() {
       email: suEmail.trim().toLowerCase(),
       password: suPass,
       options: {
-        data: { full_name: suName.trim() },
+        data: { 
+          full_name: suName.trim(),
+          preferred_language: suLang,
+        },
         emailRedirectTo: undefined,
       },
     });
@@ -111,10 +114,9 @@ export function Login() {
       // Explicitly set session so Supabase client is authenticated
       await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
 
-      // Row already exists from auth.signUp — use update not upsert
+      // Mark onboarding complete — full_name and preferred_language
+      // already saved by database trigger during signUp
       await sb.from("profiles").update({
-        full_name: suName.trim(),
-        preferred_language: suLang,
         onboarding_completed: true,
       }).eq("id", uid);
 
