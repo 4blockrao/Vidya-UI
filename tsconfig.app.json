@@ -13,7 +13,6 @@
     "jsx": "react-jsx",
     "strict": false,
     "strictNullChecks": true,
-    "baseUrl": ".",
     "paths": { "@/*": ["./src/*"] },
     "types": ["vite/client"]
   },
