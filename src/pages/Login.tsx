@@ -111,13 +111,12 @@ export function Login() {
       // Explicitly set session so Supabase client is authenticated
       await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
 
-      // Now save profile with authenticated session
-      await sb.from("profiles").upsert({
-        id: uid,
+      // Row already exists from auth.signUp — use update not upsert
+      await sb.from("profiles").update({
         full_name: suName.trim(),
         preferred_language: suLang,
         onboarding_completed: true,
-      }, { onConflict: "id" });
+      }).eq("id", uid);
 
       await sb.from("children").insert({
         user_id: uid,
