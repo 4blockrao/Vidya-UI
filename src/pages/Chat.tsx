@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearch } from "@tanstack/react-router";
-import { ArrowLeft, Mic, Send } from "lucide-react";
+import { ArrowLeft, Camera, Mic, Send } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { sb, API, type Message, getSignedUrl } from "@/lib/supabase";
+import { compressImage } from "@/lib/image";
 import { friendlyError } from "@/lib/errors";
 import { Spinner } from "@/components/Spinner";
 import { toast } from "sonner";
@@ -58,10 +59,13 @@ export function Chat() {
   const [msgs, setMsgs] = useState<UIMsg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [hwPath, setHwPath] = useState<string | null>(null);
+  const [pendingUploadId, setPendingUploadId] = useState<string | null>(upload ?? null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const sentRef = useRef(false);
   const pidRef = useRef("");
 
@@ -87,6 +91,7 @@ export function Chat() {
 
   useEffect(() => {
     if (!upload) return;
+    setPendingUploadId(upload);
     sb.from("uploads").select("file_path").eq("id", upload).single()
       .then(({ data }) => { if (data?.file_path) setHwPath(data.file_path as string); });
   }, [upload]);
@@ -98,15 +103,46 @@ export function Chat() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, id, q]);
 
+  async function handleImage(files: FileList | null) {
+    if (!files || !files.length || !session) return;
+    setUploading(true);
+    try {
+      const { data: sess } = await sb.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) throw new Error("Not authenticated");
+      const f = files[0];
+      const blob = await compressImage(f);
+      const form = new FormData();
+      form.append("file", blob, f.name.replace(/\.[^.]+$/, ".jpg"));
+      if (child) form.append("child_id", child);
+      const res = await fetch(`${API}/api/uploads/image`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const j = await res.json();
+      setPendingUploadId(j.upload_id);
+      // Get the file path for display
+      const { data } = await sb.from("uploads").select("file_path").eq("id", j.upload_id).single();
+      if (data?.file_path) setHwPath(data.file_path as string);
+      toast.success("Photo upload ho gayi!");
+    } catch (e) {
+      toast.error(friendlyError(e));
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function send(text: string) {
-    if (!text.trim() || sending) return;
+    if ((!text.trim() && !pendingUploadId) || sending) return;
     const uid = crypto.randomUUID();
     const pid = crypto.randomUUID();
     pidRef.current = pid;
 
     setMsgs(m => [
       ...m.map(x => ({ ...x, chips: false })),
-      { id: uid, role: "user" as const, content: text.trim() },
+      { id: uid, role: "user" as const, content: text.trim() || "📷 Photo" },
       { id: pid, role: "assistant" as const, content: "", pending: true, streaming: false },
     ]);
     setInput("");
@@ -115,9 +151,9 @@ export function Chat() {
     try {
       const { data: sess } = await sb.auth.getSession();
       const token = sess.session?.access_token;
-      const body: Record<string, unknown> = { message: text.trim() };
+      const body: Record<string, unknown> = { message: text.trim() || "Please explain this homework." };
       if (convId) body.conversation_id = convId;
-      else if (upload) body.upload_id = upload;
+      if (pendingUploadId) body.upload_id = pendingUploadId;
       if (child) body.child_id = child;
 
       const res = await fetch(`${API}/api/chat/stream`, {
@@ -130,6 +166,9 @@ export function Chat() {
         const e = await res.json().catch(() => ({}));
         throw new Error(e.detail || "Something went wrong");
       }
+
+      // Clear pending upload after sending
+      setPendingUploadId(null);
 
       setMsgs(m => m.map(x => x.id === pid ? { ...x, pending: false, streaming: true, content: "" } : x));
 
@@ -192,14 +231,14 @@ export function Chat() {
           <ArrowLeft size={20} />
         </button>
         <span style={{ fontSize: 14, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{title}</span>
-        {sending && <span style={{ fontSize: 11, color: "var(--c-text3)", flexShrink: 0 }}>Vidya likh rahi hai...</span>}
+        {sending && <span style={{ fontSize: 11, color: "var(--c-text3)", flexShrink: 0 }}>thinking...</span>}
       </div>
 
       <div style={{ flex: 1, overflow: "auto", padding: "14px 14px 0" }}>
         {hwPath && <HwImage path={hwPath} />}
         {msgs.length === 0 && !sending && (
           <p style={{ fontSize: 13, color: "var(--c-text2)", textAlign: "center", marginTop: 40 }}>
-            {upload ? "Homework upload ho gaya. Vidya se kuch bhi poochhein." : "Vidya se padhai ke baare mein kuch bhi poochhein."}
+            {upload ? "Homework upload ho gaya. Kuch bhi poochhein." : "Vidya se padhai ke baare mein kuch bhi poochhein."}
           </p>
         )}
         {msgs.map(m => {
@@ -230,12 +269,38 @@ export function Chat() {
         <div ref={bottomRef} style={{ height: 8 }} />
       </div>
 
-      <form onSubmit={e => { e.preventDefault(); send(input); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderTop: "0.5px solid var(--c-border)", background: "var(--c-bg)", flexShrink: 0 }}>
-        <div style={{ flex: 1, position: "relative" }}>
-          <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)} placeholder="Kuch bhi poochhein..." style={{ width: "100%", height: 38, border: "0.5px solid var(--c-border)", borderRadius: 20, background: "var(--c-bg2)", padding: "0 40px 0 14px", fontSize: 14, color: "var(--c-text)", outline: "none" }} />
-          <button type="button" onClick={() => toast("Voice — jald aa raha hai!")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "var(--c-text3)", display: "flex", background: "none", border: "none", cursor: "pointer" }}><Mic size={16} /></button>
+      {/* Pending image preview */}
+      {hwPath && pendingUploadId && (
+        <div style={{ padding: "6px 12px 0", borderTop: "0.5px solid var(--c-border)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--c-accent-bg)", borderRadius: 8, padding: "6px 10px" }}>
+            <Camera size={14} style={{ color: "var(--c-accent)", flexShrink: 0 }} />
+            <span style={{ fontSize: 12, color: "var(--c-accent-text)", flex: 1 }}>Photo ready — message type karein ya send karein</span>
+            <button onClick={() => { setHwPath(null); setPendingUploadId(null); }} style={{ fontSize: 16, color: "var(--c-text3)", background: "none", border: "none", cursor: "pointer", lineHeight: 1 }}>×</button>
+          </div>
         </div>
-        <button type="submit" disabled={!input.trim() || sending} style={{ width: 38, height: 38, borderRadius: "50%", background: "var(--c-accent)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", opacity: !input.trim() || sending ? 0.4 : 1, flexShrink: 0, border: "none", cursor: "pointer" }}><Send size={16} /></button>
+      )}
+
+      <form onSubmit={e => { e.preventDefault(); send(input); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", borderTop: "0.5px solid var(--c-border)", background: "var(--c-bg)", flexShrink: 0 }}>
+        {/* Camera button */}
+        <button type="button" onClick={() => cameraRef.current?.click()} disabled={uploading}
+          style={{ width: 36, height: 36, borderRadius: 10, color: uploading ? "var(--c-text3)" : "var(--c-accent)", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--c-accent-bg)", border: "none", cursor: "pointer", flexShrink: 0, opacity: uploading ? 0.5 : 1 }}>
+          {uploading ? <Spinner /> : <Camera size={18} />}
+        </button>
+        <input ref={cameraRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleImage(e.target.files)} />
+
+        <div style={{ flex: 1, position: "relative" }}>
+          <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
+            placeholder="Kuch bhi poochhein..."
+            style={{ width: "100%", height: 38, border: "0.5px solid var(--c-border)", borderRadius: 20, background: "var(--c-bg2)", padding: "0 40px 0 14px", fontSize: 14, color: "var(--c-text)", outline: "none" }} />
+          <button type="button" onClick={() => toast("Voice — jald aa raha hai!")}
+            style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "var(--c-text3)", display: "flex", background: "none", border: "none", cursor: "pointer" }}>
+            <Mic size={16} />
+          </button>
+        </div>
+        <button type="submit" disabled={(!input.trim() && !pendingUploadId) || sending || uploading}
+          style={{ width: 38, height: 38, borderRadius: "50%", background: "var(--c-accent)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", opacity: ((!input.trim() && !pendingUploadId) || sending || uploading) ? 0.4 : 1, flexShrink: 0, border: "none", cursor: "pointer" }}>
+          <Send size={16} />
+        </button>
       </form>
     </div>
   );
